@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选品分析 - 亚马逊卖家助手</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <h1>🛒 亚马逊卖家助手</h1>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">首页</a></li>
+                <li><a href="/product-research" class="active">选品分析</a></li>
+                <li><a href="/operations">运营管理</a></li>
+                <li><a href="/inventory">库存管理</a></li>
+                <li><a href="/advertising">广告优化</a></li>
+                <li><a href="/ranking">排名分析</a></li>
+                <li><a href="/competitor">竞品分析</a></li>
+                <li><a href="/listing">Listing优化</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <div class="container">
+            <h1>📊 选品分析</h1>
+            <p class="subtitle">通过数据分析找到最佳产品机会</p>
+        </div>
+    </div>
+
+    <div class="container main-content">
+        <div class="feature-card">
+            <h2>💰 利润计算器</h2>
+            <form id="profitForm">
+                <div class="form-group">
+                    <label>售价 ($)</label>
+                    <input type="number" step="0.01" id="selling_price" required placeholder="例如：29.99">
+                </div>
+                <div class="form-group">
+                    <label>产品成本 ($)</label>
+                    <input type="number" step="0.01" id="cost" required placeholder="例如：10.00">
+                </div>
+                <div class="form-group">
+                    <label>亚马逊佣金比例 (%)</label>
+                    <input type="number" step="0.1" id="amazon_fee" value="15" required>
+                </div>
+                <div class="form-group">
+                    <label>FBA费用 ($)</label>
+                    <input type="number" step="0.01" id="fba_fee" required placeholder="例如：4.50">
+                </div>
+                <div class="form-group">
+                    <label>运输成本 ($)</label>
+                    <input type="number" step="0.01" id="shipping_cost" value="0" placeholder="例如：2.00">
+                </div>
+                <div class="form-group">
+                    <label>其他成本 ($)</label>
+                    <input type="number" step="0.01" id="other_costs" value="0" placeholder="例如：1.00">
+                </div>
+                <button type="submit" class="btn btn-primary">计算利润</button>
+            </form>
+        </div>
+
+        <div id="profitResult" class="result-box hidden">
+            <!-- 结果将显示在这里 -->
+        </div>
+
+        <div class="feature-card mt-2">
+            <h2>🎯 产品综合评分</h2>
+            <p style="margin-bottom: 1rem;">输入产品数据和市场数据，获取综合评分和选品建议</p>
+            
+            <h3 style="color: #667eea; margin-top: 1.5rem;">产品数据</h3>
+            <form id="productScoreForm">
+                <div class="form-group">
+                    <label>产品名称</label>
+                    <input type="text" id="product_name" required placeholder="例如：无线蓝牙耳机">
+                </div>
+                <div class="form-group">
+                    <label>售价 ($)</label>
+                    <input type="number" step="0.01" id="score_selling_price" required>
+                </div>
+                <div class="form-group">
+                    <label>产品成本 ($)</label>
+                    <input type="number" step="0.01" id="score_cost" required>
+                </div>
+                <div class="form-group">
+                    <label>亚马逊佣金比例 (%)</label>
+                    <input type="number" step="0.1" id="score_amazon_fee" value="15">
+                </div>
+                <div class="form-group">
+                    <label>FBA费用 ($)</label>
+                    <input type="number" step="0.01" id="score_fba_fee" required>
+                </div>
+
+                <h3 style="color: #667eea; margin-top: 1.5rem;">市场数据</h3>
+                <div class="form-group">
+                    <label>月销量</label>
+                    <input type="number" id="monthly_sales" required placeholder="例如：5000">
+                </div>
+                <div class="form-group">
+                    <label>市场平均价格 ($)</label>
+                    <input type="number" step="0.01" id="avg_price" required>
+                </div>
+                <div class="form-group">
+                    <label>平均评分 (1-5)</label>
+                    <input type="number" step="0.1" id="avg_rating" min="1" max="5" required>
+                </div>
+                <div class="form-group">
+                    <label>平均评论数量</label>
+                    <input type="number" id="review_count" required>
+                </div>
+                <div class="form-group">
+                    <label>头部卖家数量</label>
+                    <input type="number" id="top_sellers" required placeholder="例如：10">
+                </div>
+                <div class="form-group">
+                    <label>搜索量</label>
+                    <input type="number" id="search_volume" placeholder="例如：50000">
+                </div>
+                <button type="submit" class="btn btn-primary">分析产品</button>
+            </form>
+        </div>
+
+        <div id="scoreResult" class="result-box hidden">
+            <!-- 评分结果将显示在这里 -->
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 亚马逊卖家智能辅助系统</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // 利润计算
+        document.getElementById('profitForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const data = {
+                selling_price: parseFloat(document.getElementById('selling_price').value),
+                cost: parseFloat(document.getElementById('cost').value),
+                amazon_fee_percentage: parseFloat(document.getElementById('amazon_fee').value),
+                fba_fee: parseFloat(document.getElementById('fba_fee').value),
+                shipping_cost: parseFloat(document.getElementById('shipping_cost').value),
+                other_costs: parseFloat(document.getElementById('other_costs').value)
+            };
+            
+            window.amazonTools.showLoading('profitResult');
+            
+            const result = await window.amazonTools.apiCall('/api/product-research/calculate-profit', data);
+            
+            if (result.success) {
+                const profit = result.data;
+                const html = `
+                    <h3>💰 利润分析结果</h3>
+                    <div class="metric-grid">
+                        <div class="metric-item">
+                            <div class="metric-label">售价</div>
+                            <div class="metric-value">${window.amazonTools.formatCurrency(profit.selling_price)}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">总成本</div>
+                            <div class="metric-value">${window.amazonTools.formatCurrency(profit.total_costs)}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">净利润</div>
+                            <div class="metric-value ${profit.profit > 0 ? 'positive' : 'negative'}">
+                                ${window.amazonTools.formatCurrency(profit.profit)}
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">利润率</div>
+                            <div class="metric-value ${profit.profit_margin >= 30 ? 'positive' : 'warning'}">
+                                ${window.amazonTools.formatPercent(profit.profit_margin)}
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">ROI</div>
+                            <div class="metric-value ${profit.roi >= 50 ? 'positive' : 'warning'}">
+                                ${window.amazonTools.formatPercent(profit.roi)}
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">盈利性</div>
+                            <div class="metric-value ${profit.is_profitable ? 'positive' : 'negative'}">
+                                ${profit.is_profitable ? '✅ 有利可图' : '❌ 利润不足'}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-top: 1.5rem; color: #667eea;">成本明细</h4>
+                    <div class="metric-grid">
+                        <div class="metric-item">
+                            <div class="metric-label">产品成本</div>
+                            <div class="metric-value">${window.amazonTools.formatCurrency(profit.cost_breakdown.product_cost)}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">亚马逊佣金</div>
+                            <div class="metric-value">${window.amazonTools.formatCurrency(profit.cost_breakdown.amazon_fee)}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">FBA费用</div>
+                            <div class="metric-value">${window.amazonTools.formatCurrency(profit.cost_breakdown.fba_fee)}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">运输成本</div>
+                            <div class="metric-value">${window.amazonTools.formatCurrency(profit.cost_breakdown.shipping_cost)}</div>
+                        </div>
+                    </div>
+                `;
+                window.amazonTools.showResult('profitResult', html);
+            } else {
+                window.amazonTools.showError(result.error || '计算失败');
+            }
+        });
+
+        // 产品评分
+        document.getElementById('productScoreForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const data = {
+                product_data: {
+                    selling_price: parseFloat(document.getElementById('score_selling_price').value),
+                    cost: parseFloat(document.getElementById('score_cost').value),
+                    amazon_fee_percentage: parseFloat(document.getElementById('score_amazon_fee').value),
+                    fba_fee: parseFloat(document.getElementById('score_fba_fee').value),
+                    shipping_cost: 0,
+                    other_costs: 0
+                },
+                market_data: {
+                    monthly_sales: parseInt(document.getElementById('monthly_sales').value),
+                    avg_price: parseFloat(document.getElementById('avg_price').value),
+                    avg_rating: parseFloat(document.getElementById('avg_rating').value),
+                    review_count: parseInt(document.getElementById('review_count').value),
+                    top_sellers_count: parseInt(document.getElementById('top_sellers').value),
+                    search_volume: parseInt(document.getElementById('search_volume').value) || 0
+                }
+            };
+            
+            window.amazonTools.showLoading('scoreResult');
+            
+            const result = await window.amazonTools.apiCall('/api/product-research/score-product', data);
+            
+            if (result.success) {
+                const score = result.data;
+                const html = `
+                    <h3>🎯 产品综合评分</h3>
+                    <div style="text-align: center; margin: 2rem 0;">
+                        <div style="font-size: 4rem; font-weight: bold; color: ${score.total_score >= 70 ? '#10b981' : score.total_score >= 50 ? '#f59e0b' : '#ef4444'}">
+                            ${score.total_score}
+                        </div>
+                        <div style="font-size: 1.5rem; color: #667eea; margin-top: 0.5rem;">
+                            ${score.grade}
+                        </div>
+                    </div>
+                    
+                    <h4 style="color: #667eea;">各项得分</h4>
+                    <div class="metric-grid">
+                        <div class="metric-item">
+                            <div class="metric-label">利润得分</div>
+                            <div class="metric-value">${score.scores.profit_score.toFixed(1)}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">ROI得分</div>
+                            <div class="metric-value">${score.scores.roi_score.toFixed(1)}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">市场吸引力</div>
+                            <div class="metric-value">${score.scores.market_score.toFixed(1)}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">竞争得分</div>
+                            <div class="metric-value">${score.scores.competition_score.toFixed(1)}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="recommendations">
+                        <h4>💡 选品建议</h4>
+                        <p>${score.recommendation}</p>
+                    </div>
+                    
+                    <h4 style="margin-top: 1.5rem; color: #667eea;">市场分析</h4>
+                    <div class="metric-grid">
+                        <div class="metric-item">
+                            <div class="metric-label">市场规模</div>
+                            <div class="metric-value">${window.amazonTools.formatCurrency(score.market_analysis.market_size)}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">竞争强度</div>
+                            <div class="metric-value ${score.market_analysis.competition_score < 50 ? 'positive' : 'warning'}">
+                                ${score.market_analysis.competition_score.toFixed(1)}
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">进入难度</div>
+                            <div class="metric-value ${score.market_analysis.entry_difficulty < 50 ? 'positive' : 'warning'}">
+                                ${score.market_analysis.entry_difficulty.toFixed(1)}
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">市场建议</div>
+                            <div style="font-size: 0.9rem; color: #555; padding: 0.5rem;">
+                                ${score.market_analysis.recommendation}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                window.amazonTools.showResult('scoreResult', html);
+            } else {
+                window.amazonTools.showError(result.error || '分析失败');
+            }
+        });
+    </script>
+</body>
+</html>
