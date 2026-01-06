@@ -22,6 +22,7 @@ import urllib.parse
 import urllib.robotparser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Iterable, Optional
 
 import requests
@@ -74,6 +75,7 @@ class ScrapeConfig:
     base_url: str
     keywords: list[str]
     output_dir: str
+    output_format: str = "txt"  # txt | md（适配 Dify 知识库导入）
 
     # 搜索模式
     search_url_template: Optional[str] = None  # 需包含 {kw}，可选 {page}
@@ -393,6 +395,44 @@ def _save_txt(output_dir: str, title: str, url: str, text: str) -> str:
     return path
 
 
+def _escape_frontmatter_value(v: str) -> str:
+    v = v.replace("\n", " ").strip()
+    # YAML 简单安全转义：双引号包裹并转义双引号与反斜杠
+    v = v.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{v}"'
+
+
+def _text_to_markdown_paragraphs(text: str) -> str:
+    """
+    将抽取的纯文本适配为 Markdown 段落：
+    - 保留已有的空行作为分段
+    - 避免行内多余空白
+    """
+    text = _normalize_text(text)
+    if not text:
+        return ""
+    # 已经压缩过多余空行，这里只保证段落之间一个空行
+    parts = [p.strip() for p in text.split("\n\n") if p.strip()]
+    return "\n\n".join(parts)
+
+
+def _save_md(output_dir: str, title: str, url: str, text: str) -> str:
+    _ensure_dir(output_dir)
+    path = _unique_path(output_dir, title, ".md")
+    now = datetime.now(timezone.utc).isoformat()
+    body = _text_to_markdown_paragraphs(text)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("---\n")
+        f.write(f"title: {_escape_frontmatter_value(title)}\n")
+        f.write(f"source_url: {_escape_frontmatter_value(url)}\n")
+        f.write(f"crawled_at_utc: {_escape_frontmatter_value(now)}\n")
+        f.write("---\n\n")
+        f.write(f"# {title.strip()}\n\n")
+        f.write(f"来源：{url.strip()}\n\n")
+        f.write(body.strip() + "\n")
+    return path
+
+
 def _hash_url(url: str) -> str:
     return hashlib.sha1(url.encode("utf-8")).hexdigest()[:12]
 
@@ -411,7 +451,10 @@ def download_one(session: requests.Session, url: str, cfg: ScrapeConfig, rp) -> 
         # 仍保存，但给标题加后缀方便排查
         title = f"{title} (可能未命中正文容器)"
 
-    saved_path = _save_txt(cfg.output_dir, title, url, text)
+    if cfg.output_format.lower() == "md":
+        saved_path = _save_md(cfg.output_dir, title, url, text)
+    else:
+        saved_path = _save_txt(cfg.output_dir, title, url, text)
     return saved_path, url
 
 
@@ -431,7 +474,7 @@ def _merge_cli_overrides(base: dict, overrides: dict) -> dict:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="批量下载法律法规 HTML，BeautifulSoup 提取正文并保存为 txt。"
+        description="批量下载法律法规 HTML，BeautifulSoup 提取正文并保存为 txt/md（md 适配 Dify 知识库导入）。"
     )
     p.add_argument("--config", help="JSON 配置文件路径（可选）")
 
@@ -443,6 +486,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="关键词列表（默认：劳动法 民法典）",
     )
     p.add_argument("--output-dir", default=None, help="输出目录（默认：./out）")
+    p.add_argument(
+        "--output-format",
+        default=None,
+        choices=["txt", "md"],
+        help="输出格式：txt 或 md（默认：txt；推荐 md 用于 Dify）",
+    )
 
     p.add_argument(
         "--search-url-template",
@@ -499,6 +548,7 @@ def build_config(ns: argparse.Namespace) -> ScrapeConfig:
         "base_url": ns.base_url,
         "keywords": ns.keywords,
         "output_dir": ns.output_dir,
+        "output_format": ns.output_format,
         "search_url_template": ns.search_url_template,
         "max_pages": ns.max_pages,
         "result_link_selector": ns.result_link_selector,

@@ -1,6 +1,6 @@
 ## 目标
 
-批量下载某法律法规网站中**关于“劳动法”和“民法典”**的页面（HTML），用 **BeautifulSoup** 提取正文（尽量忽略导航栏/广告/侧边栏），并自动保存为“以标题命名”的 `.txt` 文件。
+批量下载某法律法规网站中**关于“劳动法”和“民法典”**的页面（HTML），用 **BeautifulSoup** 提取正文（尽量忽略导航栏/广告/侧边栏），并自动保存为“以标题命名”的 `.txt` 或 `.md` 文件（**推荐 md 以便导入 Dify 知识库**）。
 
 > 说明：不同站点的正文 DOM 结构差异很大。脚本提供 `content_selector`/`title_selector` 进行精准抽取；不配置时会用“最长文本容器”做兜底，但建议按目标站点配置。
 
@@ -26,6 +26,7 @@ pip install -r scraper/requirements.txt
 python scraper/law_scraper.py \
   --base-url "https://example.com/" \
   --url-file "scraper/urls_example.txt" \
+  --output-format md \
   --output-dir "./out"
 ```
 
@@ -42,6 +43,7 @@ python scraper/law_scraper.py \
   --keywords 劳动法 民法典 \
   --content-selector "article" \
   --title-selector "h1" \
+  --output-format md \
   --output-dir "./out"
 ```
 
@@ -56,11 +58,24 @@ python scraper/law_scraper.py \
 
 ## 输出格式
 
-每个页面生成一个 `.txt`，文件名来源于标题（自动清理非法字符并避免重名）。文件内容：
+每个页面生成一个 `.txt` 或 `.md`，文件名来源于标题（自动清理非法字符并避免重名）。
+
+### txt
+
+`.txt` 文件内容：
 
 1) 第一行：标题
 2) 第二行：原始 URL
 3) 空一行后：正文文本
+
+### md（推荐给 Dify）
+
+`.md` 文件包含：
+
+- YAML front-matter：`title/source_url/crawled_at_utc`
+- `# 标题`
+- `来源：URL`
+- 正文段落
 
 ## 抽取正文的关键参数（强烈建议配置）
 

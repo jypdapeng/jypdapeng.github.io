@@ -2,6 +2,7 @@
   "base_url": "https://example.com/",
   "keywords": ["劳动法", "民法典"],
   "output_dir": "./out",
+  "output_format": "md",
 
   "search_url_template": "https://example.com/search?q={kw}&page={page}",
   "max_pages": 30,
