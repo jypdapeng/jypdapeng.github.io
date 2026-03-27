@@ -1,0 +1,3 @@
+# 一行一个 URL（支持 # 注释）
+https://example.com/law/123.html
+https://example.com/law/456.html
