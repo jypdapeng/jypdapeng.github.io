@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amazon 选品痛点洞察</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">PI</div>
+        <div>
+          <h1>Amazon 选品痛点洞察</h1>
+          <p>仅使用真实数据源：Google / Amazon 联想 + Rainforest API + Reddit PullPush</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="refreshBtn" class="btn primary">立即采集</button>
+      </div>
+    </header>
+
+    <div id="dataSourceBanner" class="banner hidden"></div>
+
+    <main class="layout">
+      <section class="summary card" id="summaryCard">
+        <div class="card-head">
+          <h2>今日摘要</h2>
+          <span id="reportDate" class="badge">加载中...</span>
+        </div>
+        <p id="summaryText" class="summary-text">正在加载日报...</p>
+        <div id="sourceStats" class="chips"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>搜索风向（Google + Amazon 热度）</h2>
+          <button id="refreshTrendsBtn" class="btn secondary small">刷新风向</button>
+        </div>
+        <p class="hint">自动抓取 Google 联想词 + Amazon 买家搜索词，匹配竞品 ASIN 并分析差评痛点</p>
+        <div id="trendKeywords" class="list"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>热门相关产品 · ASIN · 痛点</h2>
+          <span class="hint">按搜索热度自动发现</span>
+        </div>
+        <div id="trendProducts" class="product-grid"></div>
+      </section>
+
+      <section class="grid-2">
+        <div class="card">
+          <div class="card-head">
+            <h2>痛点排行</h2>
+            <span class="hint">来自差评与社区文本</span>
+          </div>
+          <div id="painPoints" class="list"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>建议关键词</h2>
+            <span class="hint">可直接去亚马逊/卖家精灵验证</span>
+          </div>
+          <div id="keywords" class="list"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>选品方向建议</h2>
+          <span class="hint">按痛点匹配 + 蓝海评分排序</span>
+        </div>
+        <div id="products" class="product-grid"></div>
+      </section>
+
+      <section class="grid-2">
+        <div class="card">
+          <div class="card-head">
+            <h2>手动分析</h2>
+            <span class="hint">粘贴亚马逊 1-3 星差评</span>
+          </div>
+          <textarea
+            id="analyzeInput"
+            rows="8"
+            placeholder="每行一条差评，例如：&#10;The pillow is too narrow and my leg keeps sliding off.&#10;Hard to shower alone after knee surgery."
+          ></textarea>
+          <button id="analyzeBtn" class="btn secondary">分析文本</button>
+          <div id="manualResult" class="manual-result"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>监控 ASIN</h2>
+            <span class="hint">加入后下次采集会优先抓取</span>
+          </div>
+          <div class="asin-form">
+            <input id="asinInput" maxlength="10" placeholder="例如 B07Y3PZHD9" />
+            <input id="asinLabel" placeholder="备注（可选）" />
+            <button id="addAsinBtn" class="btn secondary">添加</button>
+          </div>
+          <div id="asinList" class="chips"></div>
+          <p class="note">
+            需在 backend/.env 配置 RAINFOREST_API_KEY，系统才会拉取真实 Amazon 差评与 ASIN。
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>每日 UTC 08:00 自动采集</span>
+      <span id="statusText">系统就绪</span>
+    </footer>
+
+    <script src="/assets/app.js"></script>
+  </body>
+</html>
