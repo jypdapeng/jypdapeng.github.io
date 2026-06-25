@@ -11,8 +11,11 @@ const productsEl = document.getElementById("products");
 const statusText = document.getElementById("statusText");
 const asinList = document.getElementById("asinList");
 const manualResult = document.getElementById("manualResult");
+const trendKeywordsEl = document.getElementById("trendKeywords");
+const trendProductsEl = document.getElementById("trendProducts");
 
 document.getElementById("refreshBtn").addEventListener("click", runCollect);
+document.getElementById("refreshTrendsBtn").addEventListener("click", refreshTrends);
 document.getElementById("analyzeBtn").addEventListener("click", analyzeText);
 document.getElementById("addAsinBtn").addEventListener("click", addAsin);
 
@@ -109,6 +112,67 @@ function renderReport(report) {
       </div>`
     )
     .join("");
+
+  renderTrends(report);
+}
+
+/**
+ * 渲染搜索风向与 ASIN 痛点。
+ * @param {object} report 日报对象
+ */
+function renderTrends(report) {
+  const keywords = report.trend_keywords || [];
+  const products = report.trend_products || [];
+
+  trendKeywordsEl.innerHTML = keywords.length
+    ? keywords
+        .map(
+          (item) => `
+      <div class="list-item">
+        <h3>${escapeHtml(item.keyword)}</h3>
+        <div class="meta">
+          <span class="tag high">热度 ${item.score}</span>
+          <span class="tag">Google ${item.google_score || 0}</span>
+          <span class="tag">Amazon ${item.amazon_score || 0}</span>
+          <span class="tag">${(item.sources || []).join(" + ")}</span>
+        </div>
+      </div>`
+        )
+        .join("")
+    : "<p class='note'>暂无风向数据，点击「刷新风向」获取。</p>";
+
+  trendProductsEl.innerHTML = products.length
+    ? products
+        .map((item) => {
+          const pains = (item.pain_points || [])
+            .map((p) => `<span class="chip">${escapeHtml(p.theme_zh)} (${p.count})</span>`)
+            .join("");
+          const complaints = (item.sample_complaints || [])
+            .map((c) => `• ${escapeHtml(c)}`)
+            .join("<br/>");
+          return `
+      <div class="product-card">
+        <div class="trend-score">${item.trend_score}</div>
+        <div class="asin-link">${item.asin}</div>
+        <h3>${escapeHtml(item.title || item.keyword)}</h3>
+        <p>来源词：${escapeHtml(item.keyword)}</p>
+        <div class="meta">${pains || "<span class='tag'>暂无痛点样本</span>"}</div>
+        <div class="examples">${complaints}</div>
+      </div>`;
+        })
+        .join("")
+    : "<p class='note'>暂未匹配到 ASIN，可在 backend/.env 配置 RAINFOREST_API_KEY 提升命中率。</p>";
+}
+
+/**
+ * 单独刷新风向数据。
+ */
+async function refreshTrends() {
+  setStatus("刷新风向中...");
+  const response = await fetch("/api/trends/refresh", { method: "POST" });
+  const payload = await response.json();
+  renderTrends(payload);
+  setStatus("风向已刷新");
 }
 
 /**

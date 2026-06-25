@@ -65,6 +65,16 @@ def init_db() -> None:
             );
             """
         )
+        _migrate_reports_table(conn)
+
+
+def _migrate_reports_table(conn: sqlite3.Connection) -> None:
+    """为日报表增加风向字段（兼容旧库）。"""
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(daily_reports)").fetchall()}
+    if "trends_json" not in columns:
+        conn.execute("ALTER TABLE daily_reports ADD COLUMN trends_json TEXT DEFAULT '{}'")
+    if "trend_products_json" not in columns:
+        conn.execute("ALTER TABLE daily_reports ADD COLUMN trend_products_json TEXT DEFAULT '[]'")
 
 
 def save_raw_reviews(reviews: list[dict[str, Any]]) -> int:
@@ -99,14 +109,16 @@ def save_daily_report(report: dict[str, Any]) -> None:
             """
             INSERT INTO daily_reports (
                 report_date, pain_points_json, keywords_json, products_json,
-                summary, source_stats_json, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                summary, source_stats_json, trends_json, trend_products_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(report_date) DO UPDATE SET
                 pain_points_json = excluded.pain_points_json,
                 keywords_json = excluded.keywords_json,
                 products_json = excluded.products_json,
                 summary = excluded.summary,
                 source_stats_json = excluded.source_stats_json,
+                trends_json = excluded.trends_json,
+                trend_products_json = excluded.trend_products_json,
                 created_at = excluded.created_at
             """,
             (
@@ -116,6 +128,8 @@ def save_daily_report(report: dict[str, Any]) -> None:
                 json.dumps(report["products"], ensure_ascii=False),
                 report.get("summary", ""),
                 json.dumps(report.get("source_stats", {}), ensure_ascii=False),
+                json.dumps(report.get("trend_keywords", []), ensure_ascii=False),
+                json.dumps(report.get("trend_products", []), ensure_ascii=False),
                 datetime.utcnow().isoformat(),
             ),
         )
@@ -207,6 +221,9 @@ def add_watch_asin(asin: str, label: str = "") -> None:
 
 def _row_to_report(row: sqlite3.Row) -> dict[str, Any]:
     """将数据库行转为报告字典。"""
+    keys = row.keys()
+    trends_raw = row["trends_json"] if "trends_json" in keys else "[]"
+    products_raw = row["trend_products_json"] if "trend_products_json" in keys else "[]"
     return {
         "report_date": row["report_date"],
         "pain_points": json.loads(row["pain_points_json"]),
@@ -214,5 +231,7 @@ def _row_to_report(row: sqlite3.Row) -> dict[str, Any]:
         "products": json.loads(row["products_json"]),
         "summary": row["summary"],
         "source_stats": json.loads(row["source_stats_json"]),
+        "trend_keywords": json.loads(trends_raw) if trends_raw else [],
+        "trend_products": json.loads(products_raw) if products_raw else [],
         "created_at": row["created_at"],
     }

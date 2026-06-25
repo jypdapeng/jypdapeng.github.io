@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     )
     reddit_subreddits: str = "ACL,kneesurgery,AmazonFinds,BuyItForLife,FulfillmentByAmazon"
     default_asins: str = "B07Y3PZHD9,B0GVDCX8T2,B0DQDCBF7X,B089YBVBV3"
+    trend_seed_keywords: str = (
+        "knee surgery recovery,leg elevation pillow,knee surgery shower cover,"
+        "walker cup holder,knee extension bolster,acl surgery recovery"
+    )
+    google_trends_geo: str = "US"
+    amazon_marketplace_id: str = "ATVPDKIKX0DER"
     rainforest_api_key: str = ""
 
 

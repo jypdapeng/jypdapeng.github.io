@@ -16,6 +16,15 @@ class AmazonCollector(BaseCollector):
 
     name = "amazon"
 
+    async def collect_for_asins(self, asins: list[str]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        """
+        采集指定 ASIN 列表的差评。
+
+        @param asins ASIN 列表
+        @return (评论列表, 统计信息)
+        """
+        return await self._collect_asins(asins)
+
     async def collect(self) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         """
         采集 Amazon 评论。
@@ -23,6 +32,10 @@ class AmazonCollector(BaseCollector):
         @return (评论列表, 统计信息)
         """
         asins = self._resolve_asins()
+        return await self._collect_asins(asins)
+
+    async def _collect_asins(self, asins: list[str]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        """按 ASIN 列表执行采集。"""
         reviews: list[dict[str, Any]] = []
         stats: dict[str, Any] = {"asins": [], "errors": [], "mode": "direct"}
 
@@ -35,7 +48,11 @@ class AmazonCollector(BaseCollector):
             stats.update(direct_stats)
 
         if not reviews:
-            seed_subset = [r for r in SEED_REVIEWS if r["source"] == "amazon_seed"]
+            seed_subset = [
+                r for r in SEED_REVIEWS if r["source"] == "amazon_seed" and r.get("asin") in asins
+            ]
+            if not seed_subset:
+                seed_subset = [r for r in SEED_REVIEWS if r["source"] == "amazon_seed"]
             reviews.extend(seed_subset)
             stats["fallback_seed"] = len(seed_subset)
             stats["errors"].append("Amazon 直连被拦截，已使用内置种子差评样本")

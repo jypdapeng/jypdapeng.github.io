@@ -10,6 +10,7 @@ from app.collectors.amazon_collector import AmazonCollector
 from app.collectors.reddit_collector import RedditCollector
 from app.database import save_daily_report, save_raw_reviews
 from app.seed_data import SEED_REVIEWS
+from app.services.trend_service import build_trend_insights
 
 
 async def run_daily_collection(use_seed_on_empty: bool = True) -> dict[str, Any]:
@@ -39,26 +40,43 @@ async def run_daily_collection(use_seed_on_empty: bool = True) -> dict[str, Any]
     keywords = expand_keywords(pain_points)
     products = recommend_products(pain_points)
 
+    trend_insights = await build_trend_insights()
+    source_stats["trends"] = trend_insights.get("source_stats", {})
+
     report = {
         "report_date": date.today().isoformat(),
         "pain_points": pain_points,
         "keywords": keywords,
         "products": products,
-        "summary": _build_summary(pain_points, products, len(all_reviews)),
+        "trend_keywords": trend_insights.get("trend_keywords", []),
+        "trend_products": trend_insights.get("trend_products", []),
+        "summary": _build_summary(
+            pain_points, products, len(all_reviews), trend_insights.get("trend_keywords", [])
+        ),
         "source_stats": source_stats,
     }
     save_daily_report(report)
     return report
 
 
-def _build_summary(pain_points: list[dict], products: list[dict], review_count: int) -> str:
+def _build_summary(
+    pain_points: list[dict],
+    products: list[dict],
+    review_count: int,
+    trend_keywords: list[dict] | None = None,
+) -> str:
     """生成日报摘要。"""
-    if not pain_points:
+    if not pain_points and not trend_keywords:
         return f"今日采集 {review_count} 条文本，暂未识别显著痛点。"
-    top = pain_points[0]
+    top = pain_points[0] if pain_points else None
     best = products[0] if products else None
     product_hint = f"建议关注：{best['direction']}" if best else "建议继续扩展监控词"
-    return (
-        f"今日采集 {review_count} 条用户反馈，最高频痛点为「{top['theme_zh']}」"
-        f"（{top['count']} 次）。{product_hint}。"
-    )
+    trend_hint = ""
+    if trend_keywords:
+        trend_hint = f" 当前最热搜索词：「{trend_keywords[0]['keyword']}」。"
+    if top:
+        return (
+            f"今日采集 {review_count} 条用户反馈，最高频痛点为「{top['theme_zh']}」"
+            f"（{top['count']} 次）。{product_hint}。{trend_hint}"
+        )
+    return f"今日已更新搜索风向。{trend_hint}{product_hint}。"

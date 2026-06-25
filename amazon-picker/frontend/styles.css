@@ -228,6 +228,24 @@ body {
   margin-top: 10px;
 }
 
+.btn.small {
+  margin-top: 0;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+}
+
+.trend-score {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--warning);
+}
+
+.asin-link {
+  color: var(--primary-2);
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
 textarea,
 input {
   width: 100%;

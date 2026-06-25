@@ -25,6 +25,7 @@ from app.database import (
 )
 from app.scheduler import start_scheduler
 from app.services.daily_pipeline import run_daily_collection
+from app.services.trend_service import build_trend_insights
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -104,6 +105,28 @@ async def collect_run() -> dict:
     """手动触发采集。"""
     report = await run_daily_collection()
     return {"message": "采集完成", "report": report}
+
+
+@app.get("/api/trends/latest")
+async def trends_latest() -> dict:
+    """获取最新风向洞察（关键词 + ASIN + 痛点）。"""
+    report = get_latest_report()
+    if not report:
+        insights = await build_trend_insights()
+        return insights
+    return {
+        "trend_keywords": report.get("trend_keywords", []),
+        "trend_products": report.get("trend_products", []),
+        "report_date": report.get("report_date"),
+        "source_stats": report.get("source_stats", {}).get("trends", {}),
+    }
+
+
+@app.post("/api/trends/refresh")
+async def trends_refresh() -> dict:
+    """立即刷新 Google/Amazon 风向并返回。"""
+    insights = await build_trend_insights()
+    return {"message": "风向已刷新", **insights}
 
 
 @app.post("/api/analyze/text")
