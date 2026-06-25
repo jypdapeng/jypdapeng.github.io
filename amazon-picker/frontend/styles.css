@@ -240,10 +240,35 @@ body {
   color: var(--warning);
 }
 
-.asin-link {
-  color: var(--primary-2);
-  font-family: monospace;
+.banner {
+  width: min(1200px, calc(100% - 32px));
+  margin: 0 auto 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 191, 71, 0.35);
+  background: rgba(255, 191, 71, 0.12);
+  color: #ffe6b3;
   font-size: 0.9rem;
+}
+
+.banner.error {
+  border-color: rgba(255, 107, 107, 0.35);
+  background: rgba(255, 107, 107, 0.12);
+  color: #ffd2d2;
+}
+
+.banner.hidden {
+  display: none;
+}
+
+.real-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(62, 207, 142, 0.15);
+  color: #9ef0c8;
+  border: 1px solid rgba(62, 207, 142, 0.25);
 }
 
 textarea,

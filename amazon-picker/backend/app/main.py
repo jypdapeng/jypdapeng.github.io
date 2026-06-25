@@ -25,6 +25,7 @@ from app.database import (
 )
 from app.scheduler import start_scheduler
 from app.services.daily_pipeline import run_daily_collection
+from app.services.data_source_status import get_data_source_status
 from app.services.trend_service import build_trend_insights
 
 logging.basicConfig(level=logging.INFO)
@@ -51,10 +52,13 @@ async def lifespan(_: FastAPI):
     init_db()
     start_scheduler()
 
-    latest = get_latest_report()
-    if not latest:
-        logger.info("No report found, generating initial report...")
-        await run_daily_collection()
+    if settings.rainforest_api_key:
+        latest = get_latest_report()
+        if not latest:
+            logger.info("Generating initial real-data report...")
+            await run_daily_collection()
+    else:
+        logger.warning("RAINFOREST_API_KEY 未配置，Amazon 差评与 ASIN 发现不可用")
 
     yield
 
@@ -72,6 +76,12 @@ app.add_middleware(
 async def health() -> dict[str, str]:
     """健康检查。"""
     return {"status": "ok", "app": settings.app_name}
+
+
+@app.get("/api/data-sources/status")
+async def data_sources_status() -> dict:
+    """返回真实数据源配置状态。"""
+    return get_data_source_status()
 
 
 @app.get("/api/report/latest")

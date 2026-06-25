@@ -12,13 +12,15 @@
         <div class="logo">PI</div>
         <div>
           <h1>Amazon 选品痛点洞察</h1>
-          <p>每日抓取用户差评与社区吐槽，输出选品方向与关键词</p>
+          <p>仅使用真实数据源：Google / Amazon 联想 + Rainforest API + Reddit PullPush</p>
         </div>
       </div>
       <div class="actions">
         <button id="refreshBtn" class="btn primary">立即采集</button>
       </div>
     </header>
+
+    <div id="dataSourceBanner" class="banner hidden"></div>
 
     <main class="layout">
       <section class="summary card" id="summaryCard">
@@ -100,7 +102,7 @@
           </div>
           <div id="asinList" class="chips"></div>
           <p class="note">
-            提示：Amazon 直连可能被拦截。可在 `.env` 配置 `RAINFOREST_API_KEY` 获取真实差评。
+            需在 backend/.env 配置 RAINFOREST_API_KEY，系统才会拉取真实 Amazon 差评与 ASIN。
           </p>
         </div>
       </section>

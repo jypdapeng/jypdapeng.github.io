@@ -1,20 +1,35 @@
-# Amazon 选品痛点洞察
+# Amazon 选品痛点洞察（仅真实数据）
 
-每日采集用户差评与社区吐槽，自动提取痛点、扩展关键词、给出选品方向建议。
+所有数据均来自真实 API，**不使用任何内置样本或假数据回退**。
 
-## 功能
+## 真实数据来源
 
-- 每日自动采集（UTC 08:00，可配置）
-- **Google 搜索联想 + Amazon 买家搜索词 → 自动更新风向**
-- **按热度自动匹配竞品 ASIN，并分析每个 ASIN 的差评痛点**
-- Amazon 差评监控（支持 Rainforest API）
-- Reddit 社区文本采集
-- 痛点主题提取（滑落、太软、洗澡难、拐杖双手占用等）
-- 关键词扩展与选品方向推荐
-- 手动粘贴差评即时分析
-- 自定义监控 ASIN
+| 数据 | 来源 | 是否需要 Key |
+|------|------|-------------|
+| 搜索热词 | Google 搜索联想 API | 否 |
+| 买家搜索词 | Amazon 自动补全 API | 否 |
+| Google 热点 | Google Trends RSS | 否 |
+| Reddit 吐槽 | PullPush API | 否 |
+| **Amazon 差评** | **Rainforest API** | **是（必填）** |
+| **ASIN 自动发现** | **Rainforest Search API** | **是（必填）** |
 
 ## 快速启动
+
+### 1. 获取 Rainforest API Key
+
+1. 打开 https://www.rainforestapi.com/
+2. 注册账号并获取 API Key（有免费试用额度）
+
+### 2. 配置环境变量
+
+```bash
+cd amazon-picker/backend
+cp .env.example .env
+# 编辑 .env，填入：
+# RAINFOREST_API_KEY=你的真实密钥
+```
+
+### 3. 启动
 
 ```bash
 cd amazon-picker
@@ -22,24 +37,19 @@ chmod +x run.sh
 ./run.sh
 ```
 
-浏览器打开：`http://localhost:8080`
-
-## 配置真实 Amazon 差评
-
-1. 复制 `backend/.env.example` 为 `backend/.env`
-2. 填入 `RAINFOREST_API_KEY`（[Rainforest API](https://www.rainforestapi.com/)）
-3. 重启服务
+浏览器访问：`http://localhost:8080`
 
 ## API
 
 | 接口 | 说明 |
 |------|------|
+| `GET /api/data-sources/status` | 检查真实数据源是否就绪 |
 | `GET /api/report/latest` | 最新日报 |
-| `POST /api/collect/run` | 手动采集 |
-| `POST /api/analyze/text` | 分析粘贴文本 |
-| `POST /api/watch-asins` | 添加监控 ASIN |
+| `POST /api/collect/run` | 手动全量采集 |
+| `POST /api/trends/refresh` | 刷新搜索风向 + ASIN + 痛点 |
+| `POST /api/analyze/text` | 分析你粘贴的真实差评 |
 
 ## 说明
 
-- Amazon 直连抓取在部分服务器会被拦截，此时会使用内置种子样本 + 你粘贴的差评。
-- 配置 Rainforest API 后可获取真实 1-3 星差评，建议生产环境使用。
+- 未配置 `RAINFOREST_API_KEY` 时：Google/Amazon 风向和 Reddit 仍可用，但 **Amazon 差评和 ASIN 为空**。
+- 配置 Key 后点击「立即采集」即可获取真实差评与竞品 ASIN。

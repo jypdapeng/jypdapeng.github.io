@@ -13,6 +13,7 @@ const asinList = document.getElementById("asinList");
 const manualResult = document.getElementById("manualResult");
 const trendKeywordsEl = document.getElementById("trendKeywords");
 const trendProductsEl = document.getElementById("trendProducts");
+const dataSourceBanner = document.getElementById("dataSourceBanner");
 
 document.getElementById("refreshBtn").addEventListener("click", runCollect);
 document.getElementById("refreshTrendsBtn").addEventListener("click", refreshTrends);
@@ -25,7 +26,24 @@ init();
  * 初始化页面数据。
  */
 async function init() {
+  await loadDataSourceStatus();
   await Promise.all([loadReport(), loadAsins()]);
+}
+
+/**
+ * 加载真实数据源状态并展示提示。
+ */
+async function loadDataSourceStatus() {
+  const response = await fetch("/api/data-sources/status");
+  const status = await response.json();
+  if (status.ready) {
+    dataSourceBanner.className = "banner";
+    dataSourceBanner.innerHTML =
+      "✓ 真实数据模式已启用：Google 联想、Amazon 联想、Reddit PullPush、Rainforest API。";
+    return;
+  }
+  dataSourceBanner.className = "banner error";
+  dataSourceBanner.innerHTML = `⚠ ${escapeHtml(status.message)}`;
 }
 
 /**
@@ -131,6 +149,7 @@ function renderTrends(report) {
       <div class="list-item">
         <h3>${escapeHtml(item.keyword)}</h3>
         <div class="meta">
+          <span class="real-badge">真实 Google+Amazon</span>
           <span class="tag high">热度 ${item.score}</span>
           <span class="tag">Google ${item.google_score || 0}</span>
           <span class="tag">Amazon ${item.amazon_score || 0}</span>
@@ -156,12 +175,15 @@ function renderTrends(report) {
         <div class="asin-link">${item.asin}</div>
         <h3>${escapeHtml(item.title || item.keyword)}</h3>
         <p>来源词：${escapeHtml(item.keyword)}</p>
-        <div class="meta">${pains || "<span class='tag'>暂无痛点样本</span>"}</div>
+        <div class="meta">
+          <span class="real-badge">真实 Rainforest</span>
+          ${pains || "<span class='tag'>暂无差评样本</span>"}
+        </div>
         <div class="examples">${complaints}</div>
       </div>`;
         })
         .join("")
-    : "<p class='note'>暂未匹配到 ASIN，可在 backend/.env 配置 RAINFOREST_API_KEY 提升命中率。</p>";
+    : "<p class='note'>未获取到 ASIN。请配置 RAINFOREST_API_KEY 后点击「刷新风向」。</p>";
 }
 
 /**
