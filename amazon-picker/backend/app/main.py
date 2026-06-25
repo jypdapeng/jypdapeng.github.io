@@ -17,12 +17,14 @@ from app.analyzers.product_recommender import recommend_products
 from app.config import FRONTEND_DIR, settings
 from app.database import (
     add_watch_asin,
+    count_manual_reviews_by_asin,
     get_latest_report,
     get_report_by_date,
     init_db,
     list_reports,
     list_watch_asins,
 )
+from app.services.manual_review_service import import_manual_reviews
 from app.scheduler import start_scheduler
 from app.services.daily_pipeline import run_daily_collection
 from app.services.data_source_status import get_data_source_status
@@ -45,6 +47,14 @@ class WatchAsinRequest(BaseModel):
     label: str = ""
 
 
+class ImportReviewsRequest(BaseModel):
+    """手动导入差评请求体。"""
+
+    asin: str = Field(..., min_length=10, max_length=10)
+    text: str = Field(..., min_length=20, description="从亚马逊页面复制的 1-3 星差评")
+    rating: int | None = Field(default=None, ge=1, le=3)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     """应用生命周期：初始化数据库与调度器。"""
@@ -52,13 +62,10 @@ async def lifespan(_: FastAPI):
     init_db()
     start_scheduler()
 
-    if settings.rainforest_api_key:
-        latest = get_latest_report()
-        if not latest:
-            logger.info("Generating initial real-data report...")
-            await run_daily_collection()
-    else:
-        logger.warning("RAINFOREST_API_KEY 未配置，Amazon 差评与 ASIN 发现不可用")
+    latest = get_latest_report()
+    if not latest:
+        logger.info("Generating initial real-data report...")
+        await run_daily_collection()
 
     yield
 
@@ -171,6 +178,30 @@ async def add_asin(payload: WatchAsinRequest) -> dict:
         raise HTTPException(status_code=400, detail="ASIN 格式无效")
     add_watch_asin(asin, payload.label)
     return {"message": "已添加", "asin": asin}
+
+
+@app.post("/api/reviews/import")
+async def import_reviews(payload: ImportReviewsRequest) -> dict:
+    """
+    导入手动复制的真实 Amazon 差评。
+
+    @param payload 请求体
+    @return 导入结果
+    """
+    asin = payload.asin.upper()
+    if not asin.isalnum():
+        raise HTTPException(status_code=400, detail="ASIN 格式无效")
+    add_watch_asin(asin, "")
+    result = import_manual_reviews(asin, payload.text, payload.rating)
+    if result["imported"] == 0:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return result
+
+
+@app.get("/api/reviews/manual")
+async def manual_reviews() -> dict:
+    """获取已导入手动差评的 ASIN 统计。"""
+    return {"items": count_manual_reviews_by_asin()}
 
 
 if FRONTEND_DIR.exists():

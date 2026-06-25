@@ -257,8 +257,23 @@ body {
   color: #ffd2d2;
 }
 
+.banner.warn {
+  border-color: rgba(255, 191, 71, 0.35);
+  background: rgba(255, 191, 71, 0.12);
+  color: #ffe6b3;
+}
+
 .banner.hidden {
   display: none;
+}
+
+.asin-link a {
+  color: var(--primary-2);
+  text-decoration: none;
+}
+
+.asin-link a:hover {
+  text-decoration: underline;
 }
 
 .real-badge {

@@ -12,7 +12,7 @@
         <div class="logo">PI</div>
         <div>
           <h1>Amazon 选品痛点洞察</h1>
-          <p>仅使用真实数据源：Google / Amazon 联想 + Rainforest API + Reddit PullPush</p>
+          <p>真实数据：Google / Amazon 联想 + Reddit + 手动导入差评（Rainforest 可选）</p>
         </div>
       </div>
       <div class="actions">
@@ -37,14 +37,14 @@
           <h2>搜索风向（Google + Amazon 热度）</h2>
           <button id="refreshTrendsBtn" class="btn secondary small">刷新风向</button>
         </div>
-        <p class="hint">自动抓取 Google 联想词 + Amazon 买家搜索词，匹配竞品 ASIN 并分析差评痛点</p>
+        <p class="hint">自动抓取 Google 联想词 + Amazon 买家搜索词；竞品 ASIN 来自监控列表或 Rainforest 搜索</p>
         <div id="trendKeywords" class="list"></div>
       </section>
 
       <section class="card">
         <div class="card-head">
           <h2>热门相关产品 · ASIN · 痛点</h2>
-          <span class="hint">按搜索热度自动发现</span>
+          <span class="hint">按搜索热度或监控 ASIN 展示</span>
         </div>
         <div id="trendProducts" class="product-grid"></div>
       </section>
@@ -78,8 +78,28 @@
       <section class="grid-2">
         <div class="card">
           <div class="card-head">
-            <h2>手动分析</h2>
-            <span class="hint">粘贴亚马逊 1-3 星差评</span>
+            <h2>导入 Amazon 差评</h2>
+            <span class="hint">无需 API Key，粘贴真实 1-3 星差评</span>
+          </div>
+          <div class="asin-form">
+            <input id="importAsinInput" maxlength="10" placeholder="ASIN，例如 B07Y3PZHD9" />
+          </div>
+          <textarea
+            id="importReviewInput"
+            rows="8"
+            placeholder="从亚马逊商品页复制差评，每行一条，例如：&#10;The pillow is too narrow and my leg keeps sliding off.&#10;Not firm enough, sinks after 10 minutes."
+          ></textarea>
+          <button id="importReviewBtn" class="btn secondary">导入并分析</button>
+          <div id="importResult" class="manual-result"></div>
+          <p class="note">
+            操作：打开亚马逊商品页 → 筛选 1-3 星 → 复制评论粘贴到这里。导入后会自动加入监控并参与下次采集。
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>快速文本分析</h2>
+            <span class="hint">不保存，仅即时分析</span>
           </div>
           <textarea
             id="analyzeInput"
@@ -101,8 +121,9 @@
             <button id="addAsinBtn" class="btn secondary">添加</button>
           </div>
           <div id="asinList" class="chips"></div>
+          <div id="manualReviewStats" class="chips"></div>
           <p class="note">
-            需在 backend/.env 配置 RAINFOREST_API_KEY，系统才会拉取真实 Amazon 差评与 ASIN。
+            无 Rainforest Key 时，系统使用你导入的真实差评 + 监控 ASIN 分析竞品痛点。
           </p>
         </div>
       </section>

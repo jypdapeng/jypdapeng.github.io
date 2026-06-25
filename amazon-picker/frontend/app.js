@@ -11,6 +11,8 @@ const productsEl = document.getElementById("products");
 const statusText = document.getElementById("statusText");
 const asinList = document.getElementById("asinList");
 const manualResult = document.getElementById("manualResult");
+const importResult = document.getElementById("importResult");
+const manualReviewStats = document.getElementById("manualReviewStats");
 const trendKeywordsEl = document.getElementById("trendKeywords");
 const trendProductsEl = document.getElementById("trendProducts");
 const dataSourceBanner = document.getElementById("dataSourceBanner");
@@ -18,6 +20,7 @@ const dataSourceBanner = document.getElementById("dataSourceBanner");
 document.getElementById("refreshBtn").addEventListener("click", runCollect);
 document.getElementById("refreshTrendsBtn").addEventListener("click", refreshTrends);
 document.getElementById("analyzeBtn").addEventListener("click", analyzeText);
+document.getElementById("importReviewBtn").addEventListener("click", importReviews);
 document.getElementById("addAsinBtn").addEventListener("click", addAsin);
 
 init();
@@ -27,7 +30,7 @@ init();
  */
 async function init() {
   await loadDataSourceStatus();
-  await Promise.all([loadReport(), loadAsins()]);
+  await Promise.all([loadReport(), loadAsins(), loadManualReviewStats()]);
 }
 
 /**
@@ -36,14 +39,20 @@ async function init() {
 async function loadDataSourceStatus() {
   const response = await fetch("/api/data-sources/status");
   const status = await response.json();
-  if (status.ready) {
+  if (status.amazon_mode === "rainforest") {
     dataSourceBanner.className = "banner";
     dataSourceBanner.innerHTML =
-      "✓ 真实数据模式已启用：Google 联想、Amazon 联想、Reddit PullPush、Rainforest API。";
+      "✓ 真实数据已启用：Google 联想、Amazon 联想、Reddit、Rainforest 自动采集。";
     return;
   }
-  dataSourceBanner.className = "banner error";
-  dataSourceBanner.innerHTML = `⚠ ${escapeHtml(status.message)}`;
+  if (status.amazon_mode === "manual") {
+    dataSourceBanner.className = "banner";
+    dataSourceBanner.innerHTML = `✓ 无需 API Key：已导入 ${status.manual_review_count} 条真实 Amazon 差评，配合 Reddit 与搜索风向分析。`;
+    return;
+  }
+  dataSourceBanner.className = "banner warn";
+  dataSourceBanner.innerHTML =
+    "提示：Amazon 自动采集需要 Rainforest Key（可选）。你现在可以直接在下方粘贴真实差评，或继续用 Reddit + 搜索风向。";
 }
 
 /**
@@ -169,21 +178,27 @@ function renderTrends(report) {
           const complaints = (item.sample_complaints || [])
             .map((c) => `• ${escapeHtml(c)}`)
             .join("<br/>");
+          const methodLabel =
+            item.discovery_method === "rainforest_search"
+              ? "Rainforest 搜索"
+              : item.discovery_method === "watchlist"
+                ? "监控 ASIN"
+                : "真实数据";
           return `
       <div class="product-card">
         <div class="trend-score">${item.trend_score}</div>
-        <div class="asin-link">${item.asin}</div>
+        <div class="asin-link"><a href="https://www.amazon.com/dp/${item.asin}" target="_blank" rel="noopener">${item.asin}</a></div>
         <h3>${escapeHtml(item.title || item.keyword)}</h3>
         <p>来源词：${escapeHtml(item.keyword)}</p>
         <div class="meta">
-          <span class="real-badge">真实 Rainforest</span>
-          ${pains || "<span class='tag'>暂无差评样本</span>"}
+          <span class="real-badge">${methodLabel}</span>
+          ${pains || "<span class='tag'>暂无差评样本，请导入</span>"}
         </div>
         <div class="examples">${complaints}</div>
       </div>`;
         })
         .join("")
-    : "<p class='note'>未获取到 ASIN。请配置 RAINFOREST_API_KEY 后点击「刷新风向」。</p>";
+    : "<p class='note'>暂无竞品 ASIN。请添加监控 ASIN 或导入差评；有 Rainforest Key 时可自动搜索发现。</p>";
 }
 
 /**
@@ -195,6 +210,49 @@ async function refreshTrends() {
   const payload = await response.json();
   renderTrends(payload);
   setStatus("风向已刷新");
+}
+
+/**
+ * 导入手动复制的 Amazon 差评。
+ */
+async function importReviews() {
+  const asin = document.getElementById("importAsinInput").value.trim().toUpperCase();
+  const text = document.getElementById("importReviewInput").value.trim();
+  if (asin.length !== 10) {
+    importResult.innerHTML = "<p class='note'>请先填写 10 位 ASIN。</p>";
+    return;
+  }
+  if (text.length < 20) {
+    importResult.innerHTML = "<p class='note'>请至少粘贴 20 个字符的差评内容。</p>";
+    return;
+  }
+  setStatus("导入差评中...");
+  const response = await fetch("/api/reviews/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ asin, text }),
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    importResult.innerHTML = `<p class='note'>${escapeHtml(payload.detail || "导入失败")}</p>`;
+    setStatus("导入失败");
+    return;
+  }
+  importResult.innerHTML = `<p class='note'>${escapeHtml(payload.message)}，正在重新采集...</p>`;
+  document.getElementById("importReviewInput").value = "";
+  await Promise.all([loadAsins(), loadManualReviewStats(), loadDataSourceStatus()]);
+  await runCollect();
+}
+
+/**
+ * 加载已导入手动差评统计。
+ */
+async function loadManualReviewStats() {
+  const response = await fetch("/api/reviews/manual");
+  const payload = await response.json();
+  manualReviewStats.innerHTML = (payload.items || [])
+    .map((item) => `<span class="chip">已导入 ${item.asin} · ${item.count} 条</span>`)
+    .join("");
 }
 
 /**

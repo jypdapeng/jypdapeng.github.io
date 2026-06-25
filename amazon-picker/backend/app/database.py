@@ -180,6 +180,56 @@ def list_reports(limit: int = 30) -> list[dict[str, Any]]:
     return [_row_to_report(row) for row in rows]
 
 
+def get_reviews_by_asins(
+    asins: list[str] | None = None,
+    sources: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """
+    按 ASIN 与来源查询已保存评论。
+
+    @param asins ASIN 列表，空则不过滤
+    @param sources 来源列表，空则不过滤
+    @return 评论列表
+    """
+    query = "SELECT * FROM raw_reviews WHERE 1=1"
+    params: list[Any] = []
+
+    if asins:
+        placeholders = ",".join("?" for _ in asins)
+        query += f" AND asin IN ({placeholders})"
+        params.extend([asin.upper() for asin in asins])
+
+    if sources:
+        placeholders = ",".join("?" for _ in sources)
+        query += f" AND source IN ({placeholders})"
+        params.extend(sources)
+
+    query += " ORDER BY collected_at DESC"
+
+    with get_db() as conn:
+        rows = conn.execute(query, params).fetchall()
+    return [dict(row) for row in rows]
+
+
+def count_manual_reviews_by_asin() -> list[dict[str, Any]]:
+    """
+    统计各 ASIN 已导入的手动差评数量。
+
+    @return ASIN 统计列表
+    """
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT asin, COUNT(*) AS count
+            FROM raw_reviews
+            WHERE source = 'amazon_manual' AND asin IS NOT NULL AND asin != ''
+            GROUP BY asin
+            ORDER BY count DESC
+            """
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def get_recent_raw_reviews(hours: int = 48) -> list[dict[str, Any]]:
     """
     获取最近采集的原始文本。

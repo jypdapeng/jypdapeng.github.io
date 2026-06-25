@@ -61,7 +61,10 @@ def _build_summary(
 ) -> str:
     """生成日报摘要。"""
     if not pain_points and not trend_keywords:
-        return f"今日采集 {review_count} 条真实反馈；若 Amazon 数据为空，请检查 RAINFOREST_API_KEY。"
+        return (
+            f"今日采集 {review_count} 条真实反馈。"
+            "Amazon 差评可在页面手动粘贴导入，或配置 Rainforest 免费试用 Key 自动采集。"
+        )
     top = pain_points[0] if pain_points else None
     best = products[0] if products else None
     product_hint = f"建议关注：{best['direction']}" if best else ""
